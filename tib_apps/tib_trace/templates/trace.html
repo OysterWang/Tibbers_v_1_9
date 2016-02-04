@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+	<title>TRACE</title>
+	<link rel="shortcut icon" href="/static/images/favicon.ico" type="image/x-icon" />
+	<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=91fcUGbvXDaGq9Bmhzfj2GOb"></script>
+	<script type="text/javascript" src="/static/js/jquery-1.11.3.js"></script>
+	<script type="text/javascript" src="/static/js/TextIconOverlay_min.js"></script>
+	<style type="text/css">
+	#Container{
+	    width:100%;
+	    margin:0 auto;	/*设置整个容器在浏览器中水平居中*/
+	}
+	#map{
+	    width:65%;
+	    height:800px;
+	    margin:10px;	/*设置元素跟其他元素的距离为20像素*/
+	    float:left;
+	}
+	#panel{
+		font-family: verdana,arial,sans-serif;
+		font-size:14px;
+		width:30%;
+	    height:800px;
+	    margin:10px;
+	    float:left;
+	}
+	#table_info{
+		font-family: verdana,arial,sans-serif;
+		color:#333333;
+		border-width: 1px;
+		border-color: #666666;
+		border-collapse: collapse;
+	}
+	#table_info td {
+		border-width: 0px;
+		padding: 8px;
+		border-style: solid;
+		border-color: #666666;
+		background-color: #ffffff;
+	}
+	#host_coordinate_lng {display:inline; }
+	#host_coordinate_lat {display:inline; }
+	</style>
+</head>
+
+<body>
+<div id="container">
+<div id="map"></div>
+<div id="panel">
+	<table id="table_info">
+	<tr>
+		<td>Server Name</td>
+		<td>:</td>
+		<td id="host_name">{{ point_start.host_name }}</td>
+	</tr>
+	<tr>
+		<td>Server Local IP</td>
+		<td>:</td>
+		<td id="host_local_ip">{{ point_start.host_local_ip }}</td>
+	</tr>
+	<tr>
+		<td>Server Internet IP</td>
+		<td>:</td>
+		<td id="host_internet_ip">{{ point_start.host_internet_ip }}</td>
+	</tr>
+	<tr>
+		<td>Server Coordinate</td>
+		<td>:</td>
+		<td>
+			<div id="host_coordinate_lng">{{ point_start.host_coordinate_lng }}</div> N, <div id="host_coordinate_lat">{{ point_start.host_coordinate_lat }}</div> E
+		</td>
+	</tr>
+	</table>
+
+	<br>
+	<form>
+	    Enter the domain name or ip : <input type="text" id="ip_des" name="ip_des"> <br>
+	    <p>Result:<br> <span id='result'></span></p>
+	    <button type="button" id='submit_ip'>提交</button>
+	</form>
+</div>
+</div>
+</body>
+
+</html>
+
+<script>
+var point_from = null;
+var point_to = null;
+var need_seq = 1;
+var ip_des = null;
+var host_coordinate_lng = $("#host_coordinate_lng").text();	//经度
+var host_coordinate_lat = $("#host_coordinate_lat").text();	//纬度
+var last_point_lng = host_coordinate_lng;
+var last_point_lat = host_coordinate_lat;
+
+var map = new BMap.Map("map");	
+var mapStyle ={
+	style : "light"  //设置地图风格，normal, light, dark, redalert, googlelite, grassgreen, midnight, pink, darkgreen, bluish, grayscale, hardedge
+}
+var origin_point = new BMap.Point(host_coordinate_lng, host_coordinate_lat);
+
+map.setMapStyle(mapStyle);
+map.centerAndZoom(origin_point, 5);	//初始化地图，调整设置中心点坐标和地图级别
+map.enableScrollWheelZoom();
+
+//原始标注例子
+//var marker = new BMap.Marker(origin_point);
+//map.addOverlay(marker);
+
+//特殊标注
+var rm = new BMapLib.TextIconOverlay(origin_point, 0);	//参数：1：BMap.Point; 2.显示数字
+map.addOverlay(rm);
+
+/*
+自定义标注例子
+var myIcon = new BMap.Icon("http://developer.baidu.com/map/jsdemo/img/fox.gif", new BMap.Size(300,157));
+var marker2 = new BMap.Marker(pt,{icon:myIcon});  // 创建标注
+map.addOverlay(marker2);              // 将标注添加到地图中
+*/
+
+//画线, 构造数组point_vector，一条线的起点和终点。
+//参数：point：一条线的终点。
+function drawLine(point){
+	//如果新点没有经纬度，则还是上一个点的经纬度
+	if(point.coord[0] == null || point.coord[1] == null){
+		point.coord[0] = last_point_lng;
+		point.coord[1] = last_point_lat;
+	}
+
+	if(point.seq == 1){
+		//如果是第一跳，起始点是host点
+		point_from = new BMap.Point(host_coordinate_lng, host_coordinate_lat);
+		point_to = new BMap.Point(point.coord[0], point.coord[1]);
+		//alert('['+point.seq+']'+'point_from:'+point_from.lng+','+point_from.lat);
+	}else{
+		//如果不是第一跳，上一个point_to为起点
+		point_from = point_to;
+		point_to = new BMap.Point(point.coord[0], point.coord[1]);
+		//alert('['+point.seq+']'+'point_from:'+point_from.lng+','+point_from.lat);
+	}
+	last_point_lng = point.coord[0];	//本次终点计入last_point
+	last_point_lat = point.coord[1];	//本次终点计入last_point
+	var point_vector = [point_from, point_to];	//构造数组，一条线的起点和终点
+	var polyline = new BMap.Polyline(point_vector, {strokeColor:"blue", strokeWeight:3, strokeOpacity:0.5, strokeStyle:"dashed"});
+	map.addOverlay(polyline);	//添加到地图中
+	
+	//特殊标注
+	var rm = new BMapLib.TextIconOverlay(new BMap.Point(point.coord[0], point.coord[1]), point.seq);
+	map.addOverlay(rm);
+	map.panTo(new BMap.Point(point.coord[0], point.coord[1]))
+}
+
+function getTrace(ip_des, need_seq){
+	$.ajax({
+		type : "get",
+		url : "ajax_returnPoint",
+		//data : "ip_des=" + ip_des + "&need_seq=" + need_seq,
+		data : {"ip_des" : ip_des, "need_seq" : need_seq},
+		async : true,
+		success : function(point, statusTxt, xhr){
+			//回调函数，point为需要的下一跳结果
+			if (point.flag == 0) {
+				//返回点的flag == 0，表示trace结束
+				$('#result').append("Total " + (need_seq - 1) + " hops<br>");
+				return;
+			}
+			//alert("Error: "+xhr.status+": "+xhr.statusText);
+			drawLine(point);	//地图画线
+			$('#result').append("["+point.seq + "] " + point.city + ' : ' + point.ip + "      coord : "+ point.coord[0] + ", " + point.coord[1] + "<br>");	//显示hop文字
+			setTimeout("getTrace(ip_des, ++need_seq)",1000);	//每隔1秒，嵌套发出请求，每次的need_seq加1
+		},
+		failure: function(errMsg){
+			alert(errMsg);
+        }
+	});
+}
+
+$(document).ready(function(){
+	$("#submit_ip").click(function(){
+		$('#result').empty()
+        ip_des = $("#ip_des").val();	//得到文本框需要的域名或ip
+        getTrace(ip_des, need_seq)
+	});
+});
+</script>
+
