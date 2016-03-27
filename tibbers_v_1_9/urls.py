@@ -24,7 +24,6 @@ urlpatterns = [
 	url(r'^$',tib_trace_views.test),
     url(r'^trace$', tib_trace_views.trace), 
     url(r'^ajax_returnPoint/$', tib_trace_views.ajax_returnPoint),
-    url(r'^getIndex1$', tib_trace_views.getIndex1), 
     #url(r'^alive',tib_trace_views.index,name='alive'),
     url(r'^admin/', admin.site.urls),
 ]
