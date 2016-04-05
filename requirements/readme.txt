@@ -46,8 +46,9 @@ points = [{
 Django notes
 1.  Django安装
 python version 3.4.3，django安装：
-cd Django-1.8.3
+下载Django源码包，cd Django-1.8.3
 python setup.py install
+安装完python目录中会有django的文件。
 
 2.  创建project
 在目录E:\CloudSync\LITB_NETWORK_SYNC\Python_Projects 下，创建项目Tibbers：
@@ -57,7 +58,7 @@ django-admin startproject Tibbers
 D:\Python34\Lib\site-packages\Django-1.8.3-py3.4.egg\django\bin\django-admin startproject Tibbers
 
 3.  创建app
-Tibbers相关目录下，创建app：
+进入Tibbers\tib_apps目录下（可以创建专用目录），创建app：
 django-admin startapp testmap
 注：
 D:\Python34\Lib\site-packages\Django-1.8.3-py3.4.egg\django\bin\django-admin startapp testmap
@@ -73,7 +74,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
 #自定义应用
-    'testmap',
+    'tib_apps.tib_trace',
 )
 
 STATIC_URL = '/static/'
@@ -88,15 +89,19 @@ vi Tibbers/Tibbers/urls.py：
 #引用static新加入
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
-#http://localhost:8000/ajax_returnPoint?ip_des=1.1.1.1
+django v1.9中建议如下，导入app中的views模块
+from tib_apps.tib_trace import views as tib_trace_views
+
 urlpatterns = [
-    url(r'^$', 'testmap.views.index', name='index'),	#新加首页
-    url(r'^ajax_returnPoint/$', 'testmap.views.ajax_returnPoint', name='ajax_returnPoint'),	#新加自定义函数
-    url(r'^admin/', include(admin.site.urls)),  
+    url(r'^$',tib_trace_views.test),	#新加首页
+    url(r'^ajax_returnPoint/$', tib_trace_views.ajax_returnPoint),	#新加自定义函数
+    url(r'^admin/', admin.site.urls),
 ]
 
 #引用static新加
 urlpatterns += staticfiles_urlpatterns()
+
+#http://localhost:8000/ajax_returnPoint?ip_des=1.1.1.1
 
 6.  编写views.py
 vim Tibbers/testmap/views.py：
@@ -115,5 +120,5 @@ def ajax_returnPoint(request):
 7.  启动服务
 启动服务器，默认端口8000
 cd /d E:\CloudSync\LITB_NETWORK_SYNC\Python_Projects\Tibbers
-python manage.py runserver
+python manage.py runserver (后边可以加 0.0.0.0:8010指定ip和端口)
 
